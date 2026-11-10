@@ -15,6 +15,9 @@ const sessionHeaders = (token: string) => ({ 'X-Table-Session-Token': token });
 export const getOrderMode = async (signal?: AbortSignal) =>
   (await publicApi.get<OrderMode>('/store-settings/order-mode', { signal })).data;
 
+export const enterAdminTable = async () =>
+  (await api.post<EnterTableResponse>('/table-sessions/admin-enter')).data;
+
 export const enterTable = async (tableNumber: number) =>
   (await publicApi.post<EnterTableResponse>('/table-sessions/enter', { table_number: tableNumber }))
     .data;

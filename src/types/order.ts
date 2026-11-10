@@ -6,7 +6,7 @@ export type DiscordNotificationStatus = 'pending' | 'sending' | 'sent' | 'failed
 
 export type TableSession = {
   id: UUID;
-  table_number: number;
+  table_number: number | null;
   created_at: ISODateTime;
   checked_out_at: ISODateTime | null;
   checked_out_by_user_id: UUID | null;
@@ -32,7 +32,7 @@ export type OrderItem = {
 export type Order = {
   id: UUID;
   table_session_id: UUID;
-  table_number: number;
+  table_number: number | null;
   idempotency_key: UUID;
   total_amount: number;
   is_pos_registered: boolean;
@@ -43,7 +43,7 @@ export type Order = {
 
 export type ActiveTableOrders = {
   table_session_id: UUID;
-  table_number: number;
+  table_number: number | null;
   entered_at: ISODateTime;
   order_count: number;
   total_amount: number;
