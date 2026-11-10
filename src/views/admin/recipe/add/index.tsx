@@ -4,7 +4,7 @@ import RecipeAddForm from '@/components/admin/recipeAddForm';
 
 const AdminAddRecipePageView = () => {
   return (
-    <main className="min-h-screen bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
+    <main className="min-h-dvh bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
       <div className="mx-auto w-full max-w-3xl px-4 pt-10 pb-16 sm:px-6">
         <header className="mb-6 flex items-center justify-between gap-3">
           <div>

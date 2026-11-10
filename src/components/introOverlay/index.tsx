@@ -3,14 +3,23 @@
 import { useEffect, useState } from 'react';
 
 const IntroOverlay = () => {
-  const [isVisible, setIsVisible] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setIsVisible(false);
-    }, 2500);
-
+    let timeoutId: number | undefined;
+    const frameId = window.requestAnimationFrame(() => {
+      try {
+        if (sessionStorage.getItem('deepdeepbar_intro_seen')) return;
+        sessionStorage.setItem('deepdeepbar_intro_seen', 'true');
+      } catch {
+        return;
+      }
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      setIsVisible(true);
+      timeoutId = window.setTimeout(() => setIsVisible(false), 2000);
+    });
     return () => {
+      window.cancelAnimationFrame(frameId);
       window.clearTimeout(timeoutId);
     };
   }, []);

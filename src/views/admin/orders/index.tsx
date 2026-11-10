@@ -1,5 +1,6 @@
 'use client';
 
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
@@ -23,7 +24,6 @@ import {
 import type {
   ActiveTableOrders,
   CurrentAdmin,
-  DiscordNotification,
   Order,
   OrderMode,
   OrderPaginated,
@@ -195,7 +195,7 @@ const AdminOrdersPageView = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
+    <main className="min-h-dvh bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
       <div className="mx-auto w-full max-w-6xl px-4 pt-8 pb-16 sm:px-6 sm:pt-10">
         <AdminPageHeader
           title="매장 운영"
@@ -338,7 +338,9 @@ const ActiveTables = ({
                 warning={table.unregistered_order_count > 0}
               />
             </dl>
-            <NotificationStatus kind="table" id={table.table_session_id} />
+            {table.table_number !== null ? (
+              <NotificationStatus kind="table" id={table.table_session_id} />
+            ) : null}
             {table.orders.length === 0 ? (
               <p className="mt-4 rounded-xl bg-white p-4 text-sm text-[#6b7280]">
                 아직 주문이 없는 활성 테이블입니다.
@@ -412,78 +414,107 @@ const OrderItems = ({ order }: { order: Order }) => (
 );
 
 const NotificationStatus = ({ kind, id }: { kind: 'order' | 'table'; id: string }) => {
-  const [notification, setNotification] = useState<DiscordNotification | null>(null);
-  const [missing, setMissing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [pending, setPending] = useState(false);
-  const load = useCallback(async () => {
-    try {
-      setNotification(
-        kind === 'order'
-          ? await getOrderDiscordNotification(id)
-          : await getTableDiscordNotification(id),
-      );
-    } catch (error) {
-      if (kind === 'table' && error instanceof ApiError && error.status === 404) setMissing(true);
-    }
-  }, [id, kind]);
-  useEffect(() => {
-    const timer = window.setTimeout(() => void load(), 0);
-    const onFocus = () => void load();
-    window.addEventListener('focus', onFocus);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [load]);
-  if (missing) return <p className="mt-3 text-xs text-[#9ca3af]">Discord 알림 데이터 없음</p>;
-  if (!notification) return null;
-  const label = {
-    pending: '전송 대기',
-    sending: '전송 중',
-    sent: '전송 완료',
-    failed: '전송 실패',
-  }[notification.status];
+  const queryClient = useQueryClient();
+  const queryKey = ['discord-notification', kind, id];
+  const {
+    data: notification,
+    error,
+    isFetching,
+    refetch,
+  } = useQuery({
+    queryKey,
+    queryFn: ({ signal }) =>
+      kind === 'order'
+        ? getOrderDiscordNotification(id, signal)
+        : getTableDiscordNotification(id, signal),
+    enabled: expanded && !pending,
+    staleTime: 15000,
+    retry: false,
+  });
   const retry = async () => {
+    if (pending) return;
     setPending(true);
     try {
-      setNotification(
+      await queryClient.cancelQueries({ queryKey, exact: true });
+      const result =
         kind === 'order'
           ? await retryOrderDiscordNotification(id)
-          : await retryTableDiscordNotification(id),
-      );
+          : await retryTableDiscordNotification(id);
+      queryClient.setQueryData(queryKey, result);
       showToast({ kind: 'success', message: 'Discord 알림을 다시 전송했어요.' });
-    } catch (error) {
+    } catch (cause) {
       showToast({
         kind: 'error',
-        message: error instanceof Error ? error.message : '재전송하지 못했어요.',
+        message: cause instanceof Error ? cause.message : '재전송하지 못했어요.',
       });
     } finally {
       setPending(false);
     }
   };
+  const label = notification
+    ? {
+        pending: '전송 대기',
+        sending: '전송 중',
+        sent: '전송 완료',
+        failed: '전송 실패',
+      }[notification.status]
+    : '';
   return (
-    <div
-      className={`mt-3 rounded-lg px-3 py-2 text-xs ${notification.status === 'failed' ? 'bg-[#f8e8e5] text-[#963f38]' : 'bg-[#f3f1ed] text-[#6b7280]'}`}
+    <details
+      onToggle={(event) => setExpanded(event.currentTarget.open)}
+      className="rounded-lg border border-[#e2d8cb] px-3 py-2 text-xs text-[#6b7280]"
     >
-      <div className="flex items-center justify-between gap-2">
-        <span>Discord · {label}</span>
-        {notification.status === 'failed' ? (
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() => void retry()}
-            className="font-semibold underline disabled:opacity-50"
-          >
-            {pending ? '재전송 중…' : '재전송'}
-          </button>
-        ) : null}
-      </div>
-      {notification.status === 'failed' ? (
-        <p className="mt-1 break-all">
-          {notification.last_error ?? '오류 정보 없음'} · {notification.attempt_count}회 시도
-        </p>
+      <summary className="min-h-11 cursor-pointer content-center font-medium">
+        Discord 알림 상태 확인
+      </summary>
+      {expanded ? (
+        <div className="flex flex-col gap-2 py-2" aria-live="polite">
+          {error ? (
+            <div className="flex items-center gap-2 text-[#963f38]">
+              <span>
+                {error instanceof ApiError && error.status === 404
+                  ? 'Discord 알림 데이터 없음'
+                  : '알림 상태를 불러오지 못했어요.'}
+              </span>
+              <button
+                type="button"
+                disabled={isFetching}
+                onClick={() => void refetch()}
+                className="min-h-11 px-2 underline"
+              >
+                다시 확인
+              </button>
+            </div>
+          ) : null}
+          {!notification && isFetching ? <p>알림 상태를 확인하는 중…</p> : null}
+          {notification ? (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <span>Discord · {label}</span>
+                {notification.status === 'failed' ? (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => void retry()}
+                    className="min-h-11 px-2 font-semibold text-[#963f38] underline disabled:opacity-50"
+                  >
+                    {pending ? '재전송 중…' : '재전송'}
+                  </button>
+                ) : null}
+              </div>
+              {notification.status === 'failed' ? (
+                <p className="break-all text-[#963f38]">
+                  {notification.last_error ?? '오류 정보 없음'} · {notification.attempt_count}회
+                  시도
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </div>
       ) : null}
-    </div>
+    </details>
   );
 };
 

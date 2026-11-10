@@ -315,7 +315,7 @@ const HomePageView = () => {
 
   if (booting) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#f3ece2] text-sm text-[#6b7280]">
+      <main className="grid min-h-dvh place-items-center bg-[#f3ece2] text-sm text-[#6b7280]">
         메뉴를 준비하고 있어요…
       </main>
     );
@@ -324,7 +324,7 @@ const HomePageView = () => {
   const mustEnterTable = Boolean(orderMode?.is_order_enabled && !session);
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
+    <main className="min-h-dvh bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
       <IntroOverlay />
       <div className="mx-auto w-full max-w-3xl px-4 pt-8 pb-36 sm:px-6 sm:pt-10">
         <header className="mb-7 sm:mb-9">
@@ -355,7 +355,7 @@ const HomePageView = () => {
                     type="button"
                     onClick={() => setPanel('cart')}
                     aria-label={`장바구니 ${cartCount}개, ${formatWon(cartTotal)}`}
-                    className={`relative grid h-11 w-11 place-items-center rounded-full bg-[#2f2924] text-white shadow-[0_8px_18px_rgba(47,41,36,0.2)] transition duration-200 hover:bg-[#463b33] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#876a51] ${cartHighlighted ? 'scale-110 ring-4 ring-[#b76e48]/25' : ''}`}
+                    className={`relative grid h-11 w-11 place-items-center rounded-full bg-[#2f2924] text-white shadow-[0_8px_18px_rgba(47,41,36,0.2)] transition duration-200 hover:bg-[#463b33] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#876a51] ${cartHighlighted ? 'ring-4 ring-[#b76e48]/25 motion-safe:scale-110' : ''}`}
                   >
                     <CartIcon />
                     {cartCount > 0 ? (
@@ -420,10 +420,25 @@ const HomePageView = () => {
           </div>
         </section>
 
-        <section className="space-y-3.5 sm:space-y-4">
+        <section className="flex flex-col gap-3.5 sm:gap-4">
+          {isError && data !== undefined ? (
+            <div
+              role="alert"
+              className="flex items-center justify-between gap-3 rounded-xl bg-[#f8e8e5] p-4 text-sm text-[#963f38]"
+            >
+              <p>메뉴를 새로 불러오지 못했어요. 마지막으로 불러온 메뉴를 보여드려요.</p>
+              <button
+                type="button"
+                onClick={() => void refetchMenus()}
+                className="min-h-11 shrink-0 px-2 underline"
+              >
+                다시 시도
+              </button>
+            </div>
+          ) : null}
           {isLoading ? (
             <StatusCard>메뉴를 불러오는 중이에요.</StatusCard>
-          ) : isError ? (
+          ) : isError && data === undefined ? (
             <StatusCard>메뉴를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</StatusCard>
           ) : filteredMenus.length > 0 ? (
             filteredMenus.map((menu) => (
@@ -445,7 +460,7 @@ const HomePageView = () => {
 
       <nav
         aria-label="메뉴판 빠른 메뉴"
-        className="fixed inset-x-0 bottom-0 z-30 grid justify-items-center border-t border-[#e2d8cb] bg-[#faf6f0]/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl"
+        className="fixed inset-x-0 bottom-0 z-30 grid justify-items-center border-t border-[#e2d8cb] bg-[#faf6f0]/95 pt-3 pr-[max(1rem,env(safe-area-inset-right,0px))] pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))] backdrop-blur-xl"
       >
         <div className="grid w-full max-w-3xl grid-cols-2 gap-3 justify-self-center">
           <button
@@ -527,7 +542,7 @@ const HomePageView = () => {
             role="dialog"
             aria-modal="true"
             aria-label={panel === 'cart' ? '장바구니' : '현재 주문 내역'}
-            className="max-h-[88vh] w-full overflow-y-auto rounded-t-3xl border border-[#ded3c6] bg-[#faf6f0] p-5 shadow-2xl sm:max-w-xl sm:rounded-3xl sm:p-6"
+            className="max-h-[88dvh] w-full overflow-y-auto rounded-t-3xl border border-[#ded3c6] bg-[#faf6f0] p-5 shadow-2xl sm:max-w-xl sm:rounded-3xl sm:p-6"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">
@@ -627,7 +642,7 @@ const MenuDetailModal = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="menu-detail-title"
-        className="max-h-[90vh] w-full overflow-y-auto rounded-t-3xl border border-[#ded3c6] bg-[#faf7f2] p-5 shadow-2xl sm:max-w-md sm:rounded-3xl sm:p-6"
+        className="max-h-[90dvh] w-full overflow-y-auto rounded-t-3xl border border-[#ded3c6] bg-[#faf7f2] p-5 shadow-2xl sm:max-w-md sm:rounded-3xl sm:p-6"
       >
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-[#d8cec3] sm:hidden" />
         <div className="flex items-start justify-between gap-4">
