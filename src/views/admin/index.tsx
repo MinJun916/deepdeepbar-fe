@@ -42,6 +42,17 @@ const AdminPageView = () => {
             <h2 className="mt-2 text-xl font-semibold">레시피 관리</h2>
             <p className="mt-2 text-sm text-[#4b5563]">칵테일 레시피를 관리합니다.</p>
           </Link>
+          <Link
+            href="/admin/staff-calls"
+            prefetch={false}
+            className="flex flex-col gap-2 rounded-2xl border border-[#e2d8cb] bg-[#f8f3ec] p-5 transition hover:shadow-[0_10px_24px_rgba(120,84,52,0.12)]"
+          >
+            <p className="text-xs font-semibold tracking-wide text-[#876a51]">STAFF CALLS</p>
+            <h2 className="text-xl font-semibold">직원 호출 관리</h2>
+            <p className="text-sm text-[#4b5563]">
+              호출 항목의 문구, 표시 여부와 순서를 관리합니다.
+            </p>
+          </Link>
         </section>
       </div>
     </main>

@@ -113,6 +113,10 @@ api.interceptors.response.use(
       return Promise.reject(toApiError(error));
     }
 
+    if (config.url?.includes('/auth/login')) {
+      return Promise.reject(toApiError(error));
+    }
+
     if (isAuthRoute(config.url) || config._retry) {
       redirectToLogin();
       return Promise.reject(toApiError(error));

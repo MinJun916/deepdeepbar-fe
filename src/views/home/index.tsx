@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import AdminEntryModal from '@/components/admin/AdminEntryModal';
 import Footer from '@/components/footer';
 import IntroOverlay from '@/components/introOverlay';
 import MenuCard from '@/components/menu/menuCard';
 import ScrollToTopButton from '@/components/scrollToTopButton';
 import { showToast } from '@/components/sonner';
+import StaffCallDialog from '@/components/staffCall';
 import { useMenusQuery } from '@/hooks/queries/useMenuQuery';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { ApiError } from '@/lib/axios';
@@ -17,6 +19,7 @@ import {
   getStoredCart,
   getTableSessionToken,
   setTableSessionToken,
+  setAdminSessionToken,
   storeCart,
 } from '@/lib/tableSession';
 import {
@@ -28,7 +31,7 @@ import {
 } from '@/services/order.service';
 
 import type { Menu } from '@/types/menu';
-import type { CartItem, Order, OrderMode, TableSession } from '@/types/order';
+import type { CartItem, EnterTableResponse, Order, OrderMode, TableSession } from '@/types/order';
 
 const categories = [
   { key: 'all', label: '전체' },
@@ -66,6 +69,8 @@ const HomePageView = () => {
   const [selectedPriceId, setSelectedPriceId] = useState('');
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [cartHighlighted, setCartHighlighted] = useState(false);
+  const [adminLoginOpen, setAdminLoginOpen] = useState(false);
+  const [staffCallOpen, setStaffCallOpen] = useState(false);
   const [tableNumber, setTableNumber] = useState('');
   const [tableError, setTableError] = useState('');
   const [isEntering, setIsEntering] = useState(false);
@@ -77,8 +82,8 @@ const HomePageView = () => {
   const debouncedSearchKeyword = useDebouncedValue(searchKeyword.trim(), 300);
   const { data, isLoading, isError, refetch: refetchMenus } = useMenusQuery(debouncedSearchKeyword);
 
-  const resetExpiredSession = useCallback(() => {
-    clearCustomerSession();
+  const resetExpiredSession = useCallback((expectedToken: string | null) => {
+    if (!clearCustomerSession(expectedToken)) return;
     setSession(null);
     setCart([]);
     setOrders([]);
@@ -108,7 +113,7 @@ const HomePageView = () => {
             setOrders(await getCurrentOrders(token));
             setOrdersError('');
           } catch (error) {
-            if (error instanceof ApiError && error.status === 401) resetExpiredSession();
+            if (error instanceof ApiError && error.status === 401) resetExpiredSession(token);
             else
               setOrdersError(
                 error instanceof Error ? error.message : '주문 내역을 불러오지 못했어요.',
@@ -118,7 +123,7 @@ const HomePageView = () => {
           }
         }
       } else if (sessionResult.reason instanceof ApiError && sessionResult.reason.status === 401) {
-        resetExpiredSession();
+        resetExpiredSession(token);
       }
     },
     [resetExpiredSession],
@@ -296,7 +301,7 @@ const HomePageView = () => {
       }
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        resetExpiredSession();
+        resetExpiredSession(token);
       } else {
         const message = error instanceof Error ? error.message : '주문하지 못했어요.';
         setOrderError(message);
@@ -321,7 +326,7 @@ const HomePageView = () => {
   return (
     <main className="min-h-screen bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
       <IntroOverlay />
-      <div className="mx-auto w-full max-w-3xl px-4 pt-8 pb-16 sm:px-6 sm:pt-10">
+      <div className="mx-auto w-full max-w-3xl px-4 pt-8 pb-36 sm:px-6 sm:pt-10">
         <header className="mb-7 sm:mb-9">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -331,7 +336,9 @@ const HomePageView = () => {
             <div className="flex items-center gap-2">
               {session ? (
                 <span className="hidden rounded-full border border-[#d7cec2] bg-[#f8f3ec] px-3 py-2 text-sm font-semibold text-[#5a3d26] sm:inline-flex">
-                  Table {session.table_number}
+                  {session.table_number === null
+                    ? '테이블 관리자'
+                    : `Table ${session.table_number}`}
                 </span>
               ) : null}
               {orderMode?.is_order_enabled && session ? (
@@ -436,6 +443,40 @@ const HomePageView = () => {
         <Footer />
       </div>
 
+      <nav
+        aria-label="메뉴판 빠른 메뉴"
+        className="fixed inset-x-0 bottom-0 z-30 grid justify-items-center border-t border-[#e2d8cb] bg-[#faf6f0]/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-xl"
+      >
+        <div className="grid w-full max-w-3xl grid-cols-2 gap-3 justify-self-center">
+          <button
+            type="button"
+            onClick={() => setStaffCallOpen(true)}
+            className="flex min-h-13 items-center justify-center gap-2 rounded-2xl border border-[#cdbca9] bg-white px-3 font-semibold text-[#5a3d26] motion-safe:active:scale-[0.98]"
+          >
+            직원 호출
+          </button>
+          <button
+            type="button"
+            onClick={() => setPanel('cart')}
+            disabled={!orderMode?.is_order_enabled || !session}
+            className="flex min-h-13 items-center justify-center gap-2 rounded-2xl bg-[#2f2924] px-3 font-semibold text-white disabled:bg-[#ded5ca] disabled:text-[#817365] motion-safe:active:scale-[0.98]"
+          >
+            장바구니{cartCount ? ` · ${cartCount}` : ''}
+          </button>
+        </div>
+      </nav>
+      {staffCallOpen ? (
+        <StaffCallDialog
+          session={session}
+          onClose={() => setStaffCallOpen(false)}
+          onExpired={resetExpiredSession}
+          onEntered={(entered) => {
+            setTableSessionToken(entered.session_token);
+            setSession(entered);
+            setOrders([]);
+          }}
+        />
+      ) : null}
       <ScrollToTopButton />
 
       {selectedMenu ? (
@@ -458,6 +499,20 @@ const HomePageView = () => {
           pending={isEntering}
           onChange={setTableNumber}
           onSubmit={handleEnter}
+          onAdmin={() => setAdminLoginOpen(true)}
+        />
+      ) : null}
+      {adminLoginOpen ? (
+        <AdminEntryModal
+          onClose={() => setAdminLoginOpen(false)}
+          onEnter={(entered: EnterTableResponse) => {
+            setAdminSessionToken(entered.session_token);
+            setSession(entered);
+            setCart([]);
+            setOrders([]);
+            idempotencyRef.current = null;
+            setAdminLoginOpen(false);
+          }}
         />
       ) : null}
       {panel ? (
@@ -707,12 +762,14 @@ const TableEntryModal = ({
   pending,
   onChange,
   onSubmit,
+  onAdmin,
 }: {
   tableNumber: string;
   error: string;
   pending: boolean;
   onChange: (value: string) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  onAdmin: () => void;
 }) => (
   <div className="fixed inset-0 z-50 grid place-items-center bg-[#2f2924]/45 p-4 backdrop-blur-sm">
     <section
@@ -721,7 +778,14 @@ const TableEntryModal = ({
       aria-labelledby="table-title"
       className="w-full max-w-sm rounded-3xl border border-[#ded3c6] bg-[#faf6f0] p-6 shadow-2xl"
     >
-      <p className="text-xs font-semibold tracking-[0.2em] text-[#876a51]">WELCOME</p>
+      <button
+        type="button"
+        onClick={onAdmin}
+        disabled={pending}
+        className="text-xs font-semibold tracking-[0.2em] text-[#876a51]"
+      >
+        WELCOME
+      </button>
       <h2 id="table-title" className="mt-2 text-2xl font-semibold">
         테이블 번호를 알려주세요
       </h2>

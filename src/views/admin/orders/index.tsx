@@ -50,7 +50,7 @@ const AdminOrdersPageView = () => {
   const loadActive = useCallback(async () => {
     try {
       const data = await getActiveTables();
-      setTables([...data].sort((a, b) => a.table_number - b.table_number));
+      setTables([...data].sort((a, b) => (a.table_number ?? 0) - (b.table_number ?? 0)));
       setError('');
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '활성 테이블을 불러오지 못했어요.');
@@ -149,7 +149,7 @@ const AdminOrdersPageView = () => {
       setHistory(null);
       showToast({
         kind: 'success',
-        message: `${checkoutTarget.table_number}번 테이블 체크아웃을 완료했어요.`,
+        message: `${checkoutTarget.table_number === null ? '테이블 관리자' : `${checkoutTarget.table_number}번 테이블`} 체크아웃을 완료했어요.`,
       });
     } catch (mutationError) {
       setError(mutationError instanceof Error ? mutationError.message : '체크아웃하지 못했어요.');
@@ -314,7 +314,9 @@ const ActiveTables = ({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold tracking-wide text-[#876a51]">TABLE</p>
-                <h2 className="mt-1 text-2xl font-semibold">{table.table_number}번</h2>
+                <h2 className="mt-1 text-2xl font-semibold">
+                  {table.table_number === null ? '관리자' : `${table.table_number}번`}
+                </h2>
                 <p className="mt-1 text-xs text-[#6b7280]">
                   {formatDateTime(table.entered_at)} 입장
                 </p>
@@ -546,7 +548,8 @@ const HistoryView = ({
             <div className="flex justify-between gap-3">
               <div>
                 <p className="text-xs text-[#876a51]">
-                  Table {order.table_number} · {formatDateTime(order.created_at)}
+                  {order.table_number === null ? '테이블 관리자' : `Table ${order.table_number}`} ·{' '}
+                  {formatDateTime(order.created_at)}
                 </p>
                 <h3 className="mt-1 font-semibold">주문 {order.id.slice(0, 8)}</h3>
               </div>
@@ -652,7 +655,8 @@ const CheckoutModal = ({
         className="w-full max-w-md rounded-3xl bg-[#faf6f0] p-6 shadow-2xl"
       >
         <h2 id="checkout-title" className="text-xl font-semibold">
-          {table.table_number}번 테이블 체크아웃
+          {table.table_number === null ? '테이블 관리자' : `${table.table_number}번 테이블`}{' '}
+          체크아웃
         </h2>
         <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
           <Stat label="주문" value={`${table.order_count}건`} />
