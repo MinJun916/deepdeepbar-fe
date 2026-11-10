@@ -2,9 +2,10 @@ import { api } from '@/lib/axios';
 
 import type { CreateRecipeRequest, RecipeResponse, UpdateRecipeRequest } from '@/types/recipe';
 
-export const getRecipes = async (keyword?: string) => {
+export const getRecipes = async (keyword?: string, signal?: AbortSignal) => {
   const res = await api.get<RecipeResponse[]>('/recipes', {
     params: keyword ? { keyword } : undefined,
+    signal,
   });
 
   return res.data;

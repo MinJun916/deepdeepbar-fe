@@ -5,6 +5,7 @@ import { getRecipes } from '@/services/recipe.service';
 export const useGetRecipesQuery = (keyword: string) => {
   return useQuery({
     queryKey: ['recipes', keyword],
-    queryFn: () => getRecipes(keyword || undefined),
+    staleTime: 60_000,
+    queryFn: ({ signal }) => getRecipes(keyword || undefined, signal),
   });
 };

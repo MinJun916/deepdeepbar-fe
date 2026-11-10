@@ -56,8 +56,8 @@ const AdminLoginPageView = () => {
   };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
-      <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-4 py-10 sm:px-6">
+    <main className="min-h-dvh bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
+      <div className="mx-auto flex min-h-dvh w-full max-w-md items-center px-4 py-10 sm:px-6">
         <section className="w-full rounded-2xl border border-[#e2d8cb] bg-[#f8f3ec] p-6">
           <p className="text-xs font-medium tracking-[0.22em] text-[#876a51]">ADMIN LOGIN</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">Menu Admin</h1>

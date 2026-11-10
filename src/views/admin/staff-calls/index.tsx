@@ -102,6 +102,7 @@ const StaffCallsAdminView = () => {
   const [message, setMessage] = useState('');
   const optionsQuery = useQuery({
     queryKey: ['staff-call-options', 'admin'],
+    staleTime: 60_000,
     queryFn: ({ signal }) => getStaffCallOptions(true, signal),
   });
 
@@ -150,7 +151,7 @@ const StaffCallsAdminView = () => {
   };
 
   return (
-    <main className="grid min-h-screen justify-items-center bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
+    <main className="grid min-h-dvh justify-items-center bg-[radial-gradient(120%_90%_at_50%_0%,#fcf8f2_0%,#f3ece2_56%,#ece2d6_100%)] text-[#1f2937]">
       <div className="grid w-full gap-5 justify-self-center px-4 py-10 sm:px-6 lg:max-w-3xl">
         <AdminPageHeader
           title="직원 호출 관리"

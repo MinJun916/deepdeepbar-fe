@@ -83,15 +83,18 @@ export const updateOrderMode = async (isOrderEnabled: boolean) =>
     })
   ).data;
 
-export const getOrderDiscordNotification = async (orderId: string) =>
-  (await api.get<DiscordNotification>(`/orders/${orderId}/discord-notification`)).data;
+export const getOrderDiscordNotification = async (orderId: string, signal?: AbortSignal) =>
+  (await api.get<DiscordNotification>(`/orders/${orderId}/discord-notification`, { signal })).data;
 
 export const retryOrderDiscordNotification = async (orderId: string) =>
   (await api.post<DiscordNotification>(`/orders/${orderId}/discord-notification/retry`)).data;
 
-export const getTableDiscordNotification = async (tableSessionId: string) =>
-  (await api.get<DiscordNotification>(`/table-sessions/${tableSessionId}/discord-notification`))
-    .data;
+export const getTableDiscordNotification = async (tableSessionId: string, signal?: AbortSignal) =>
+  (
+    await api.get<DiscordNotification>(`/table-sessions/${tableSessionId}/discord-notification`, {
+      signal,
+    })
+  ).data;
 
 export const retryTableDiscordNotification = async (tableSessionId: string) =>
   (

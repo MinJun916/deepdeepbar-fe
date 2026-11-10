@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
+import { showToast } from '@/components/sonner';
 import { ApiError } from '@/lib/axios';
 import { getTableSessionToken } from '@/lib/tableSession';
 import { enterTable } from '@/services/order.service';
@@ -31,12 +32,12 @@ const StaffCallDialog = ({
   const [selectedId, setSelectedId] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
-  const [feedback, setFeedback] = useState('');
   const queryClient = useQueryClient();
   const token = session ? getTableSessionToken() : null;
   const callsKey = ['staff-calls', token];
   const options = useQuery({
     queryKey: ['staff-call-options'],
+    staleTime: 60_000,
     queryFn: ({ signal }) => getStaffCallOptions(false, signal),
   });
   const calls = useQuery({
@@ -82,11 +83,15 @@ const StaffCallDialog = ({
     }
   };
   const send = async () => {
-    if (!token || !selectedOption || waiting || busyRef.current) return;
+    if (!token || !selectedOption || busyRef.current) return;
+    if (waiting) {
+      showToast({ kind: 'info', message: '이미 접수된 요청이에요. 직원이 확인하고 있어요.' });
+      onClose();
+      return;
+    }
     busyRef.current = true;
     setPending(true);
     setError('');
-    setFeedback('');
     try {
       const result = await createStaffCall(token, selectedId);
       queryClient.setQueryData<StaffCall[]>(callsKey, (current = []) => [
@@ -96,11 +101,12 @@ const StaffCallDialog = ({
       if (result.notification_status === 'failed') {
         setError('직원에게 전달하지 못했어요. 다시 보내기를 눌러 주세요.');
       } else {
-        setFeedback(
-          result.notification_status === 'sent'
-            ? '직원에게 전달했어요. 잠시만 기다려 주세요.'
-            : '요청을 전달하고 있어요.',
-        );
+        showToast({
+          kind: 'success',
+          message:
+            result.notification_status === 'sent' ? '직원에게 전달했어요.' : '요청을 접수했어요.',
+        });
+        onClose();
       }
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 401) onExpired(token);
@@ -209,7 +215,6 @@ const StaffCallDialog = ({
                       onChange={() => {
                         setSelectedId(option.id);
                         setError('');
-                        setFeedback('');
                       }}
                       className="h-4 w-4 shrink-0 accent-[#745239]"
                     />
@@ -244,31 +249,17 @@ const StaffCallDialog = ({
             <button
               type="button"
               onClick={() => void send()}
-              disabled={
-                pending || !selectedOption || Boolean(waiting) || calls.isPending || calls.isError
-              }
+              disabled={pending || !selectedOption || calls.isPending || calls.isError}
               className="min-h-13 rounded-xl bg-[#2f2924] px-4 font-semibold text-white disabled:bg-[#ded5ca] disabled:text-[#817365] motion-safe:active:scale-[0.98]"
             >
               {pending
                 ? '보내는 중…'
                 : waiting
-                  ? '요청 처리 대기 중'
+                  ? '접수된 요청 확인'
                   : activeCall?.retry_available
                     ? '다시 보내기'
                     : '요청 보내기'}
             </button>
-            <div aria-live="polite" className="flex flex-col gap-2 text-sm">
-              {feedback ? <p className="text-[#526541]">{feedback}</p> : null}
-              {calls.data
-                ?.filter((call) => call.completed_at)
-                .sort((a, b) => Date.parse(b.completed_at!) - Date.parse(a.completed_at!))
-                .slice(0, 3)
-                .map((call) => (
-                  <p key={call.id} className="text-[#526541]">
-                    ✓ {call.label} · 처리 완료
-                  </p>
-                ))}
-            </div>
           </>
         )}
         {error ? (
